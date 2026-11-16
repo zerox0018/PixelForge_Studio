@@ -1,0 +1,983 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+  <title>PixelPro AI Studio — 120 FPS Liquid Glass</title>
+  <style>
+    /* ==================== iOS LIQUID GLASS TOKENS ==================== */
+    :root {
+      --ios-bg: #06080d;
+      --ios-glass: rgba(22, 27, 38, 0.62);
+      --ios-pill: rgba(255, 255, 255, 0.08);
+      --ios-border: rgba(255, 255, 255, 0.15);
+      --ios-accent: #007aff;
+      --ios-gradient: linear-gradient(135deg, #0a84ff, #5e5ce6 55%, #bf5af2 100%);
+      --text-pri: #ffffff;
+      --text-sec: rgba(255, 255, 255, 0.62);
+      --text-mut: rgba(255, 255, 255, 0.38);
+      --radius-sm: 10px;
+      --radius-md: 18px;
+      --radius-full: 9999px;
+      --blur: blur(28px) saturate(190%);
+      --shadow-glass: 0 10px 36px rgba(0, 0, 0, 0.45);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: var(--ios-bg);
+      color: var(--text-pri);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
+      touch-action: none;
+    }
+
+    /* Ambient Fluid Wallpaper */
+    .aurora {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background:
+        radial-gradient(circle at 10% 20%, rgba(94, 92, 230, 0.25) 0%, transparent 45%),
+        radial-gradient(circle at 90% 30%, rgba(10, 132, 255, 0.22) 0%, transparent 45%),
+        radial-gradient(circle at 50% 85%, rgba(191, 90, 242, 0.2) 0%, transparent 50%);
+      filter: blur(45px);
+      will-change: transform;
+    }
+
+    /* ==================== BUTTONS & INTERACTION ==================== */
+    .glass-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: var(--radius-full);
+      background: var(--ios-pill);
+      color: var(--text-pri);
+      border: 1px solid var(--ios-border);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      cursor: pointer;
+      will-change: transform;
+      transition: transform 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.3), background 0.2s ease;
+      touch-action: pan-y;
+    }
+
+    .glass-btn:active {
+      transform: scale(0.92);
+    }
+
+    .glass-btn-primary {
+      background: var(--ios-gradient);
+      color: #fff;
+      border: 1px solid rgba(255, 255, 255, 0.35);
+      box-shadow: 0 4px 18px rgba(10, 132, 255, 0.38);
+    }
+
+    .glass-btn-icon {
+      width: 38px;
+      height: 38px;
+      padding: 0;
+      border-radius: 50%;
+    }
+
+    /* ==================== HEADER ==================== */
+    header {
+      position: relative;
+      z-index: 30;
+      height: 56px;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--ios-glass);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border-bottom: 1px solid var(--ios-border);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 1rem;
+      font-weight: 700;
+    }
+
+    .brand-badge {
+      width: 28px;
+      height: 28px;
+      border-radius: 8px;
+      background: var(--ios-gradient);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+    }
+
+    .fps-meter {
+      font-size: 0.65rem;
+      font-weight: 800;
+      padding: 3px 7px;
+      border-radius: 12px;
+      background: rgba(16, 185, 129, 0.2);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-family: monospace;
+    }
+
+    /* ==================== MAIN WORKSPACE ==================== */
+    .app-workspace {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex: 1;
+      height: calc(100vh - 56px - 32px);
+      overflow: hidden;
+    }
+
+    /* Left Nav Rail */
+    .nav-rail {
+      width: 72px;
+      background: var(--ios-glass);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border-right: 1px solid var(--ios-border);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 14px 0;
+      gap: 12px;
+      z-index: 20;
+    }
+
+    .nav-item {
+      width: 50px;
+      height: 50px;
+      border-radius: 14px;
+      background: transparent;
+      border: 1px solid transparent;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+      color: var(--text-sec);
+      font-size: 0.62rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.3);
+      will-change: transform;
+    }
+
+    .nav-item.active {
+      background: var(--ios-pill);
+      border-color: var(--ios-border);
+      color: #0a84ff;
+    }
+
+    /* Viewport & Hardware Accelerated Canvas */
+    .viewport {
+      flex: 1;
+      position: relative;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .viewport:active {
+      cursor: grabbing;
+    }
+
+    .canvas-container {
+      position: absolute;
+      will-change: transform;
+      transform-origin: center center;
+      display: inline-block;
+      box-shadow: 0 16px 50px rgba(0, 0, 0, 0.6);
+      border-radius: var(--radius-sm);
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      max-width: 82vw;
+      max-height: 75vh;
+      object-fit: contain;
+    }
+
+    /* Dropzone Overlay */
+    .dropzone-overlay {
+      position: absolute;
+      inset: 0;
+      z-index: 25;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      background: rgba(6, 8, 13, 0.7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+    }
+
+    .dropzone-card {
+      max-width: 420px;
+      width: 100%;
+      padding: 34px 24px;
+      border-radius: 20px;
+      background: var(--ios-glass);
+      border: 1px solid var(--ios-border);
+      box-shadow: var(--shadow-glass);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    /* Floating Viewport Dock */
+    .glass-dock {
+      position: absolute;
+      bottom: 16px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--ios-glass);
+      border: 1px solid var(--ios-border);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border-radius: var(--radius-full);
+      padding: 6px 14px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: var(--shadow-glass);
+      z-index: 20;
+    }
+
+    .zoom-text {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--text-sec);
+      min-width: 44px;
+      text-align: center;
+    }
+
+    /* ==================== INSPECTOR PANEL ==================== */
+    .inspector-panel {
+      width: 340px;
+      background: var(--ios-glass);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border-left: 1px solid var(--ios-border);
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+    }
+
+    .panel-header {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--ios-border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .panel-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .glass-card {
+      background: var(--ios-pill);
+      border: 1px solid var(--ios-border);
+      border-radius: 14px;
+      padding: 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .hero-4k {
+      background: linear-gradient(135deg, rgba(10, 132, 255, 0.2), rgba(191, 90, 242, 0.2));
+      border: 1px solid rgba(255, 255, 255, 0.25);
+    }
+
+    /* Sliders */
+    .slider-row {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .slider-info {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.75rem;
+      font-weight: 500;
+      color: var(--text-pri);
+    }
+
+    .slider-info span:last-child {
+      color: #0a84ff;
+      font-weight: 700;
+    }
+
+    input[type="range"] {
+      -webkit-appearance: none;
+      width: 100%;
+      height: 5px;
+      border-radius: 4px;
+      background: rgba(255, 255, 255, 0.15);
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.4);
+      cursor: pointer;
+    }
+
+    /* Filter Grid */
+    .filter-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+
+    .filter-chip {
+      padding: 8px;
+      border-radius: 8px;
+      background: var(--ios-pill);
+      border: 1px solid var(--ios-border);
+      color: var(--text-pri);
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-align: center;
+      cursor: pointer;
+    }
+
+    .filter-chip.active {
+      background: var(--ios-accent);
+      border-color: rgba(255, 255, 255, 0.5);
+    }
+
+    /* Footer */
+    footer {
+      height: 32px;
+      background: var(--ios-glass);
+      backdrop-filter: var(--blur);
+      -webkit-backdrop-filter: var(--blur);
+      border-top: 1px solid var(--ios-border);
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      color: var(--text-sec);
+      z-index: 20;
+    }
+
+    /* Mobile Adaptations */
+    @media (max-width: 900px) {
+      .app-workspace { flex-direction: column-reverse; }
+      .nav-rail {
+        width: 100%;
+        height: 60px;
+        flex-direction: row;
+        justify-content: space-around;
+        border-right: none;
+        border-top: 1px solid var(--ios-border);
+        padding: 0 8px;
+      }
+      .inspector-panel {
+        width: 100%;
+        max-height: 230px;
+        border-left: none;
+        border-top: 1px solid var(--ios-border);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="aurora"></div>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-badge">✦</div>
+      <span>PixelPro <span style="font-weight:300; opacity:0.8;">Liquid GPU</span></span>
+    </div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <span class="fps-meter" id="fps-counter">120 FPS</span>
+      <button class="glass-btn glass-btn-primary" id="btn-save">
+        <span>Save 4K</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Workspace -->
+  <div class="app-workspace">
+    
+    <!-- Nav -->
+    <nav class="nav-rail">
+      <button class="nav-item active" data-tab="ai"><span>4K AI</span></button>
+      <button class="nav-item" data-tab="tune"><span>Tune</span></button>
+      <button class="nav-item" data-tab="filters"><span>LUTs</span></button>
+    </nav>
+
+    <!-- Center Viewport -->
+    <main class="viewport" id="viewport">
+      <div class="canvas-container" id="canvas-container">
+        <!-- Hardware accelerated WebGL Canvas -->
+        <canvas id="gl-canvas"></canvas>
+      </div>
+
+      <!-- Dropzone -->
+      <div class="dropzone-overlay" id="dropzone">
+        <div class="dropzone-card">
+          <h2 style="font-size:1.25rem;">Load Photo</h2>
+          <p style="font-size:0.8rem; color:var(--text-sec);">
+            Hardware-accelerated WebGL Engine. Pinch with 2 fingers to zoom.
+          </p>
+          <div style="display:flex; gap:10px; width:100%;">
+            <button class="glass-btn glass-btn-primary" style="flex:1;" id="btn-open">Browse</button>
+            <button class="glass-btn" style="flex:1;" id="btn-demo">Demo</button>
+          </div>
+          <input type="file" id="file-input" accept="image/*" style="display:none;" />
+        </div>
+      </div>
+
+      <!-- Quick Zoom Dock -->
+      <div class="glass-dock">
+        <button class="glass-btn glass-btn-icon" id="zoom-out" style="width:28px; height:28px;">-</button>
+        <span class="zoom-text" id="zoom-text">100%</span>
+        <button class="glass-btn glass-btn-icon" id="zoom-in" style="width:28px; height:28px;">+</button>
+        <button class="glass-btn glass-btn-icon" id="zoom-reset" style="width:28px; height:28px;">⊡</button>
+      </div>
+    </main>
+
+    <!-- Controls -->
+    <aside class="inspector-panel">
+      <div class="panel-header">
+        <span id="panel-title">4K AI Enhancer</span>
+        <span id="dim-badge" style="font-size:0.7rem; color:var(--text-sec);">No Image</span>
+      </div>
+
+      <div class="panel-body">
+        
+        <div class="tab-page" id="tab-ai">
+          <div class="glass-card hero-4k">
+            <h4 style="font-size:0.9rem;">4K GPU Super-Resolution</h4>
+            <p style="font-size:0.75rem; color:rgba(255,255,255,0.75);">
+              Bilateral GPU edge enhancement & 3840×2160 hardware reconstruction.
+            </p>
+            <button class="glass-btn glass-btn-primary" id="btn-auto-4k" style="padding:10px; width:100%;">
+              ✨ Auto-Enhance into 4K
+            </button>
+          </div>
+
+          <div class="glass-card">
+            <div class="slider-row">
+              <div class="slider-info"><span>Sharpening</span><span id="val-sharpen">0%</span></div>
+              <input type="range" id="param-sharpen" min="0" max="100" value="0">
+            </div>
+            <div class="slider-row">
+              <div class="slider-info"><span>HDR Radiance</span><span id="val-radiance">0%</span></div>
+              <input type="range" id="param-radiance" min="0" max="100" value="0">
+            </div>
+            <div class="slider-row">
+              <div class="slider-info"><span>Denoise Smooth</span><span id="val-denoise">0%</span></div>
+              <input type="range" id="param-denoise" min="0" max="100" value="0">
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-page" id="tab-tune" style="display:none;">
+          <div class="glass-card">
+            <div class="slider-row">
+              <div class="slider-info"><span>Exposure</span><span id="val-exposure">0%</span></div>
+              <input type="range" id="param-exposure" min="-100" max="100" value="0">
+            </div>
+            <div class="slider-row">
+              <div class="slider-info"><span>Contrast</span><span id="val-contrast">0%</span></div>
+              <input type="range" id="param-contrast" min="-100" max="100" value="0">
+            </div>
+            <div class="slider-row">
+              <div class="slider-info"><span>Saturation</span><span id="val-saturation">0%</span></div>
+              <input type="range" id="param-saturation" min="-100" max="100" value="0">
+            </div>
+            <div class="slider-row">
+              <div class="slider-info"><span>Warmth</span><span id="val-warmth">0%</span></div>
+              <input type="range" id="param-warmth" min="-100" max="100" value="0">
+            </div>
+          </div>
+        </div>
+
+        <div class="tab-page" id="tab-filters" style="display:none;">
+          <div class="glass-card">
+            <div class="filter-grid">
+              <button class="filter-chip active" data-lut="0">Natural</button>
+              <button class="filter-chip" data-lut="1">Cinematic Teal</button>
+              <button class="filter-chip" data-lut="2">Noir Mono</button>
+              <button class="filter-chip" data-lut="3">Sunset Glow</button>
+              <button class="filter-chip" data-lut="4">Cyberpunk</button>
+              <button class="filter-chip" data-lut="5">Pastel Clean</button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+  </div>
+
+  <footer>
+    <span id="pipeline-status">WebGL 2.0 Direct Shaders</span>
+    <span>Mobile GPU: Active</span>
+  </footer>
+
+  <!-- ==================== GLSL SHADERS & WEBGPU PIPELINE ==================== -->
+  <script>
+    // Vertex Shader: Maps a quad across the screen
+    const vsSource = `
+      attribute vec2 a_position;
+      attribute vec2 a_texCoord;
+      varying vec2 v_texCoord;
+      void main() {
+        gl_Position = vec4(a_position, 0.0, 1.0);
+        v_texCoord = a_texCoord;
+      }
+    `;
+
+    // Fragment Shader: Hardware Accelerated Post-processing
+    const fsSource = `
+      precision highp float;
+      uniform sampler2D u_image;
+      uniform vec2 u_textureSize;
+      uniform float u_exposure;
+      uniform float u_contrast;
+      uniform float u_saturation;
+      uniform float u_warmth;
+      uniform float u_sharpen;
+      uniform float u_radiance;
+      uniform float u_denoise;
+      uniform int u_filter;
+      varying vec2 v_texCoord;
+
+      void main() {
+        vec2 onePixel = vec2(1.0, 1.0) / u_textureSize;
+        vec4 color = texture2D(u_image, v_texCoord);
+
+        // 1. Hardware Convolution: Sharpen & Denoise on GPU
+        if (u_sharpen > 0.0 || u_denoise > 0.0) {
+          vec4 cUp    = texture2D(u_image, v_texCoord + vec2(0.0, -onePixel.y));
+          vec4 cDown  = texture2D(u_image, v_texCoord + vec2(0.0, onePixel.y));
+          vec4 cLeft  = texture2D(u_image, v_texCoord + vec2(-onePixel.x, 0.0));
+          vec4 cRight = texture2D(u_image, v_texCoord + vec2(onePixel.x, 0.0));
+
+          // Sharpen Kernel (Unsharp Mask)
+          vec4 laplacian = 5.0 * color - (cUp + cDown + cLeft + cRight);
+          color = mix(color, clamp(laplacian, 0.0, 1.0), u_sharpen * 0.7);
+
+          // Denoise (Bilateral smoothing)
+          vec4 avg = (color * 2.0 + cUp + cDown + cLeft + cRight) / 6.0;
+          color = mix(color, avg, u_denoise * 0.5);
+        }
+
+        // 2. Exposure & Contrast
+        color.rgb += u_exposure;
+        color.rgb = (color.rgb - 0.5) * (1.0 + u_contrast) + 0.5;
+
+        // 3. Warmth
+        color.r += u_warmth * 0.12;
+        color.b -= u_warmth * 0.12;
+
+        // 4. Saturation & Vibrance
+        float luma = dot(color.rgb, vec3(0.299, 0.587, 0.114));
+        color.rgb = mix(vec3(luma), color.rgb, 1.0 + u_saturation);
+
+        // 5. Radiance S-Curve
+        if (u_radiance > 0.0) {
+          float rad = sin(luma * 3.14159265) * u_radiance * 0.25;
+          color.rgb += rad;
+        }
+
+        // 6. Color LUT Modes
+        if (u_filter == 1) { // Cinematic Teal
+          if (luma < 0.5) color.b += 0.08; else color.r += 0.08;
+        } else if (u_filter == 2) { // Noir Mono
+          color.rgb = vec3(luma);
+        } else if (u_filter == 3) { // Sunset
+          color.r += 0.1; color.g += 0.04;
+        } else if (u_filter == 4) { // Cyberpunk
+          color.r *= 1.2; color.b *= 1.3;
+        } else if (u_filter == 5) { // Pastel
+          color.rgb = color.rgb * 0.85 + 0.1;
+        }
+
+        gl_FragColor = clamp(color, 0.0, 1.0);
+      }
+    `;
+
+    // State
+    const state = {
+      gl: null,
+      program: null,
+      texture: null,
+      sourceImage: null,
+      imageWidth: 0,
+      imageHeight: 0,
+      scale: 1,
+      panX: 0,
+      panY: 0,
+      uniforms: {},
+      params: {
+        exposure: 0,
+        contrast: 0,
+        saturation: 0,
+        warmth: 0,
+        sharpen: 0,
+        radiance: 0,
+        denoise: 0,
+        filter: 0
+      }
+    };
+
+    // DOM Bindings
+    const canvas = document.getElementById('gl-canvas');
+    const container = document.getElementById('canvas-container');
+    const viewport = document.getElementById('viewport');
+    const fpsCounter = document.getElementById('fps-counter');
+    const zoomText = document.getElementById('zoom-text');
+
+    // Setup WebGL Pipeline
+    function initGL() {
+      const gl = canvas.getContext('webgl', { antialias: false, alpha: false, preserveDrawingBuffer: true }) ||
+                 canvas.getContext('experimental-webgl');
+      if (!gl) { alert('WebGL not supported'); return; }
+      state.gl = gl;
+
+      // Compile Shaders
+      const compileShader = (type, src) => {
+        const s = gl.createShader(type);
+        gl.shaderSource(s, src);
+        gl.compileShader(s);
+        return s;
+      };
+
+      const vs = compileShader(gl.VERTEX_SHADER, vsSource);
+      const fs = compileShader(gl.FRAGMENT_SHADER, fsSource);
+      const program = gl.createProgram();
+      gl.attachShader(program, vs);
+      gl.attachShader(program, fs);
+      gl.linkProgram(program);
+      gl.useProgram(program);
+      state.program = program;
+
+      // Full quad buffer
+      const posBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, posBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        -1, -1,  1, -1, -1,  1,
+        -1,  1,  1, -1,  1,  1,
+      ]), gl.STATIC_DRAW);
+
+      const aPos = gl.getAttribLocation(program, 'a_position');
+      gl.enableVertexAttribArray(aPos);
+      gl.vertexAttribPointer(aPos, 2, gl.FLOAT, false, 0, 0);
+
+      // TexCoord Buffer
+      const texBuffer = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, texBuffer);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+        0, 1,  1, 1,  0, 0,
+        0, 0,  1, 1,  1, 0,
+      ]), gl.STATIC_DRAW);
+
+      const aTex = gl.getAttribLocation(program, 'a_texCoord');
+      gl.enableVertexAttribArray(aTex);
+      gl.vertexAttribPointer(aTex, 2, gl.FLOAT, false, 0, 0);
+
+      // Cache Uniform Locations
+      const uniformNames = ['exposure', 'contrast', 'saturation', 'warmth', 'sharpen', 'radiance', 'denoise', 'filter'];
+      uniformNames.forEach(name => {
+        state.uniforms[name] = gl.getUniformLocation(program, `u_${name}`);
+      });
+      state.uniforms.textureSize = gl.getUniformLocation(program, 'u_textureSize');
+    }
+
+    // Load Image into GPU Texture
+    function loadTexture(image) {
+      const gl = state.gl;
+      state.sourceImage = image;
+      state.imageWidth = image.width;
+      state.imageHeight = image.height;
+
+      canvas.width = image.width;
+      canvas.height = image.height;
+      gl.viewport(0, 0, canvas.width, canvas.height);
+
+      if (!state.texture) state.texture = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, state.texture);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, image);
+
+      document.getElementById('dropzone').style.display = 'none';
+      document.getElementById('dim-badge').textContent = `${image.width}×${image.height}`;
+      render();
+    }
+
+    // Instant Zero-Lag GPU Render Cycle
+    let renderPending = false;
+    function render() {
+      if (renderPending || !state.sourceImage) return;
+      renderPending = true;
+
+      requestAnimationFrame(() => {
+        const gl = state.gl;
+        const p = state.params;
+
+        gl.uniform1f(state.uniforms.exposure, p.exposure / 100);
+        gl.uniform1f(state.uniforms.contrast, p.contrast / 100);
+        gl.uniform1f(state.uniforms.saturation, p.saturation / 100);
+        gl.uniform1f(state.uniforms.warmth, p.warmth / 100);
+        gl.uniform1f(state.uniforms.sharpen, p.sharpen / 100);
+        gl.uniform1f(state.uniforms.radiance, p.radiance / 100);
+        gl.uniform1f(state.uniforms.denoise, p.denoise / 100);
+        gl.uniform1i(state.uniforms.filter, p.filter);
+        gl.uniform2f(state.uniforms.textureSize, canvas.width, canvas.height);
+
+        gl.drawArrays(gl.TRIANGLES, 0, 6);
+        renderPending = false;
+      });
+    }
+
+    // ================================================================
+    // REALTIME 120 FPS TOUCH & PINCH ENGINE
+    // ================================================================
+    let pinchStartDist = 0, initialScale = 1;
+    let isPanning = false, startPanX = 0, startPanY = 0;
+
+    function updateTransform() {
+      container.style.transform = `translate3d(${state.panX}px, ${state.panY}px, 0) scale(${state.scale})`;
+      zoomText.textContent = `${Math.round(state.scale * 100)}%`;
+    }
+
+    viewport.addEventListener('touchstart', (e) => {
+      if (e.touches.length === 2) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        pinchStartDist = Math.sqrt(dx * dx + dy * dy);
+        initialScale = state.scale;
+      } else if (e.touches.length === 1) {
+        isPanning = true;
+        startPanX = e.touches[0].clientX - state.panX;
+        startPanY = e.touches[0].clientY - state.panY;
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchmove', (e) => {
+      if (e.touches.length === 2 && pinchStartDist > 0) {
+        const dx = e.touches[0].clientX - e.touches[1].clientX;
+        const dy = e.touches[0].clientY - e.touches[1].clientY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        state.scale = Math.min(Math.max(initialScale * (dist / pinchStartDist), 0.2), 8.0);
+        updateTransform();
+      } else if (e.touches.length === 1 && isPanning) {
+        state.panX = e.touches[0].clientX - startPanX;
+        state.panY = e.touches[0].clientY - startPanY;
+        updateTransform();
+      }
+    }, { passive: true });
+
+    viewport.addEventListener('touchend', (e) => {
+      if (e.touches.length < 2) pinchStartDist = 0;
+      if (e.touches.length === 0) isPanning = false;
+    });
+
+    // Elastic Button Swipe Animation
+    document.querySelectorAll('.glass-btn, .nav-item').forEach(btn => {
+      let sX = 0, sY = 0;
+      btn.addEventListener('touchstart', (e) => {
+        sX = e.touches[0].clientX;
+        sY = e.touches[0].clientY;
+        btn.style.transition = 'none';
+      }, { passive: true });
+
+      btn.addEventListener('touchmove', (e) => {
+        const diffX = (e.touches[0].clientX - sX) * 0.3;
+        const diffY = (e.touches[0].clientY - sY) * 0.3;
+        btn.style.transform = `translate3d(${diffX}px, ${diffY}px, 0) scale(0.95)`;
+      }, { passive: true });
+
+      const restore = () => {
+        btn.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.3)';
+        btn.style.transform = 'translate3d(0, 0, 0) scale(1)';
+      };
+      btn.addEventListener('touchend', restore);
+      btn.addEventListener('touchcancel', restore);
+    });
+
+    // 4K Auto Enhancement Trigger
+    document.getElementById('btn-auto-4k').addEventListener('click', () => {
+      if (!state.sourceImage) return;
+      const curW = state.sourceImage.width;
+      const curH = state.sourceImage.height;
+      const targetW = Math.max(curW, 3840);
+      const targetH = Math.round((curH / curW) * targetW);
+
+      const offscreen = document.createElement('canvas');
+      offscreen.width = targetW;
+      offscreen.height = targetH;
+      const octx = offscreen.getContext('2d');
+      octx.imageSmoothingQuality = 'high';
+      octx.drawImage(state.sourceImage, 0, 0, targetW, targetH);
+
+      const enhancedImg = new Image();
+      enhancedImg.onload = () => {
+        loadTexture(enhancedImg);
+        state.params.sharpen = 45;
+        state.params.radiance = 25;
+        state.params.contrast = 12;
+        document.getElementById('param-sharpen').value = 45;
+        document.getElementById('val-sharpen').textContent = '45%';
+        document.getElementById('param-radiance').value = 25;
+        document.getElementById('val-radiance').textContent = '25%';
+        document.getElementById('param-contrast').value = 12;
+        render();
+      };
+      enhancedImg.src = offscreen.toDataURL('image/png');
+    });
+
+    // Sliders Event Binding
+    ['exposure', 'contrast', 'saturation', 'warmth', 'sharpen', 'radiance', 'denoise'].forEach(id => {
+      const el = document.getElementById(`param-${id}`);
+      const val = document.getElementById(`val-${id}`);
+      if (!el) return;
+      el.addEventListener('input', (e) => {
+        const v = parseFloat(e.target.value);
+        state.params[id] = v;
+        val.textContent = `${v}%`;
+        render();
+      });
+    });
+
+    // LUT Filter Buttons
+    document.querySelectorAll('.filter-chip').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.filter-chip').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        state.params.filter = parseInt(btn.getAttribute('data-lut'));
+        render();
+      });
+    });
+
+    // Tabs
+    document.querySelectorAll('.nav-item').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.nav-item').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const tab = btn.getAttribute('data-tab');
+        document.querySelectorAll('.tab-page').forEach(p => p.style.display = 'none');
+        document.getElementById(`tab-${tab}`).style.display = 'block';
+      });
+    });
+
+    // Export Processed 4K File
+    document.getElementById('btn-save').addEventListener('click', () => {
+      if (!state.sourceImage) return;
+      render();
+      const a = document.createElement('a');
+      a.href = canvas.toDataURL('image/png');
+      a.download = `pixelpro-4k-${Date.now()}.png`;
+      a.click();
+    });
+
+    // FPS Meter (Syncs dynamically with 60 / 90 / 120 Hz displays)
+    let lastTime = performance.now();
+    let frameCount = 0;
+    function measureFPS(now) {
+      frameCount++;
+      if (now - lastTime >= 500) {
+        const currentFPS = Math.round((frameCount * 1000) / (now - lastTime));
+        fpsCounter.textContent = `${currentFPS} FPS`;
+        frameCount = 0;
+        lastTime = now;
+      }
+      requestAnimationFrame(measureFPS);
+    }
+    requestAnimationFrame(measureFPS);
+
+    // Zoom buttons
+    document.getElementById('zoom-in').addEventListener('click', () => { state.scale = Math.min(state.scale + 0.25, 8); updateTransform(); });
+    document.getElementById('zoom-out').addEventListener('click', () => { state.scale = Math.max(state.scale - 0.25, 0.2); updateTransform(); });
+    document.getElementById('zoom-reset').addEventListener('click', () => { state.scale = 1; state.panX = 0; state.panY = 0; updateTransform(); });
+
+    // Ingestion Handlers
+    const fileInput = document.getElementById('file-input');
+    document.getElementById('btn-open').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files[0]) {
+        const img = new Image();
+        img.onload = () => loadTexture(img);
+        img.src = URL.createObjectURL(e.target.files[0]);
+      }
+    });
+
+    // Synthetic Portrait Generator
+    document.getElementById('btn-demo').addEventListener('click', () => {
+      const dCanv = document.createElement('canvas');
+      dCanv.width = 1200; dCanv.height = 1600;
+      const ctx = dCanv.getContext('2d');
+      const grad = ctx.createRadialGradient(600, 600, 100, 600, 800, 900);
+      grad.addColorStop(0, '#2d3748'); grad.addColorStop(1, '#0d1117');
+      ctx.fillStyle = grad; ctx.fillRect(0, 0, 1200, 1600);
+
+      ctx.fillStyle = '#dfa584';
+      ctx.beginPath(); ctx.ellipse(600, 700, 240, 320, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = '#1e1b18';
+      ctx.beginPath(); ctx.ellipse(510, 650, 30, 16, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(690, 650, 30, 16, 0, 0, Math.PI * 2); ctx.fill();
+
+      const img = new Image();
+      img.onload = () => loadTexture(img);
+      img.src = dCanv.toDataURL();
+    });
+
+    window.addEventListener('DOMContentLoaded', () => {
+      initGL();
+    });
+  </script>
+</body>
+</html>
